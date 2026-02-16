@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scream Alert (UI v0.9-ish)</title>
+
+    <style>
+        
+        html, body {
+            height: 100%;
+            margin: 0;
+            background: #0f0f0f;    
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            cursor: pointer;        
+            color: #00ff00;         
+        }
+
+        
+        #status {
+            font-size: 4.8em;   
+            padding: 40px 55px; 
+            border-radius: 18px;
+            background: #132013;   
+            transition: 0.35s;     
+            text-align: center;
+        }
+
+      
+        .safe {
+            background: #162416;
+            color: #21c421;
+        }
+
+      
+        .scream {
+            background: #ff0000;
+            color: #fff;
+          
+            animation: flash 0.4s infinite, shake 0.12s infinite;
+        }
+
+      
+        @keyframes flash {
+            0%, 100% { opacity: 1; }
+            40% { opacity: 0.3; }
+            80% { opacity: 0.6; }
+        }
+
+        
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            50% { transform: translateX(8px); }
+            75% { transform: translateX(-6px); }
+            100% { transform: translateX(0); }
+        }
+
+        
+        #clickUnlock {
+            position: absolute;
+            bottom: 25px;
+            width: 100%;
+            text-align: center;
+            color: #ccc;
+            font-size: 1.3em;
+           
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="status" class="safe">SAFE</div>
+
+    
+    <div id="clickUnlock">Click anywhere to enable alert sound 🔊</div>
+
+    <audio id="alertSound" src="static/alert.mp3" preload="auto"></audio>
+
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+
+    <script>
+        const socket = io("http://127.0.0.1:5000");
+
+        const statusBox = document.getElementById("status");
+        const unlockMsg = document.getElementById("clickUnlock");
+        const alertSound = document.getElementById("alertSound");
+
+        let audioReady = false; 
+
+        document.body.addEventListener("click", () => {
+           
+            alertSound.play().then(() => {
+                alertSound.pause();
+                alertSound.currentTime = 0;
+
+                audioReady = true;
+                unlockMsg.style.display = "none";
+            }).catch(err => {
+                console.log("Audio unlock failed (again):", err);
+            });
+        });
+
+        socket.on("scream_event", data => {
+
+            // uncomment for debugging:
+            // console.log("event got:", data);
+
+            if (data.status === "scream") {
+
+                statusBox.textContent = `SCREAM! (${data.confidence.toFixed(1)}%)`;
+                statusBox.className = "scream";
+
+                if (audioReady) {
+                    alertSound.currentTime = 0;
+                    alertSound.play();
+
+                    setTimeout(() => alertSound.pause(), 2500);
+                }
+
+            } else {
+
+                statusBox.textContent = `SAFE (${data.confidence.toFixed(1)}%)`;
+                statusBox.className = "safe";
+            }
+        });
+
+
+    </script>
+
+</body>
+</html>
+
